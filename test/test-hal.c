@@ -1,4 +1,4 @@
-#include "../include/hal-layer.h"
+#include "../include/hal.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -9,6 +9,14 @@ int main() {
 
   char *filename = "./sample/floppy.img";
   HAL_open_ro_image(filename);
+  assert(512 == HAL_sector_size());
+  assert(512 == HAL_cluster_size());
+  assert(512 == HAL_reserved_size());
+  assert(2 == HAL_fat_count());
+  assert(224 == HAL_maxfile_count());
+  assert(2880 == HAL_sector_count());
+  assert(9 * 512 == HAL_fat_size());
+
   assert(512 == HAL_read_sector(2, buf1));
   assert(512 * 2 == HAL_read_multi_sector(3, 2, buf1 + 512));
   HAL_close_image();
