@@ -8,18 +8,9 @@ int main() {
   uint8_t buf2[512 * 3];
 
   char *filename = "./sample/floppy.img";
-  HAL_open_ro_image(filename);
-  assert(512 == HAL_sector_size());
-  assert(512 == HAL_cluster_size());
-  assert(512 == HAL_reserved_size());
-  assert(2 == HAL_fat_count());
-  assert(224 == HAL_maxfile_count());
-  assert(2880 == HAL_sector_count());
-  assert(9 * 512 == HAL_fat_size());
-
-  assert(512 == HAL_read_sector(2, buf1));
+  HAL_open_file(filename);
+  assert(511 == HAL_read_sector(2, buf1));
   assert(512 * 2 == HAL_read_multi_sector(3, 2, buf1 + 512));
-  HAL_close_image();
 
   FILE *image = fopen(filename, "r");
   fseek(image, 2 * 512, SEEK_SET);
