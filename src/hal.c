@@ -9,35 +9,29 @@
 static FILE *image = NULL;
 
 uint8_t HAL_read_u8(int offset) {
-  assert(image != NULL);
-
-  fseek(image, offset, SEEK_SET);
   uint8_t ret;
-  fread(&ret, 1, 1, image);
+  HAL_read_bytes(offset, 1, &ret);
   return ret;
 }
 
 uint16_t HAL_read_uint16_le(int offset) {
-  assert(image != NULL);
-
-  fseek(image, offset, SEEK_SET);
   uint8_t buf[2];
-  fread(buf, 1, 2, image);
-  uint16_t ret;
-  ret = ((uint16_t)buf[0] | ((uint16_t)buf[1]) << 8);
-  return ret;
+  HAL_read_bytes(offset, 2, buf);
+  return ((uint16_t)buf[0] | ((uint16_t)buf[1]) << 8);
+}
+
+uint32_t HAL_read_uint24_le(int offset) {
+  uint8_t buf[3];
+  HAL_read_bytes(offset, 3, buf);
+  return ((uint32_t)buf[0] | ((uint32_t)buf[1]) << 8 |
+          ((uint32_t)buf[2]) << 16);
 }
 
 uint32_t HAL_read_uint32_le(int offset) {
-  assert(image != NULL);
-
-  fseek(image, offset, SEEK_SET);
-  int8_t buf[4];
-  fread(buf, 1, 4, image);
-  uint16_t ret;
-  ret = ((uint32_t)buf[0] | ((uint32_t)buf[1]) << 8 | ((uint32_t)buf[2]) << 16 |
-         ((uint32_t)buf[3]) << 24);
-  return ret;
+  uint8_t buf[4];
+  HAL_read_bytes(offset, 4, buf);
+  return ((uint32_t)buf[0] | ((uint32_t)buf[1]) << 8 |
+          ((uint32_t)buf[2]) << 16 | ((uint32_t)buf[3]) << 24);
 }
 
 int32_t HAL_sector_size() {
@@ -47,17 +41,28 @@ int32_t HAL_sector_size() {
 
 int32_t HAL_open_file(const char *path) {
   image = fopen(path, "r");
+  if (!image) {
+    printf("open failed! abort");
+    return -1;
+  }
   return 0;
 }
+
 int32_t HAL_close_file() {
   fclose(image);
   image = NULL;
   return 0;
 }
-int32_t HAL_read_bytes(int offset, uint32_t num, uint8_t *buf) {
-  fseeko(image, offset, SEEK_SET);
-  int ret = fread(buf, 1, num, image);
-  return ret;
+
+int32_t HAL_read_bytes(int offset, uint32_t num, void *buf) {
+  if (fseeko(image, offset, SEEK_SET)) {
+    printf("seek failed! retry");
+    if (fseeko(image, offset, SEEK_SET)) {
+      printf("seek failed! abort");
+      return 1;
+    }
+  }
+  return fread(buf, 1, num, image);
 }
 
 int32_t HAL_read_sector(uint32_t idx, uint8_t *buf) {

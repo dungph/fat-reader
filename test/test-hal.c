@@ -9,7 +9,7 @@ int main() {
 
   char *filename = "./sample/floppy.img";
   HAL_open_file(filename);
-  assert(511 == HAL_read_sector(2, buf1));
+  assert(512 == HAL_read_sector(2, buf1));
   assert(512 * 2 == HAL_read_multi_sector(3, 2, buf1 + 512));
 
   FILE *image = fopen(filename, "r");

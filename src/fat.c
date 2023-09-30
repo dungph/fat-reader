@@ -7,72 +7,169 @@
 #include <stdlib.h>
 #include <string.h>
 
-static union entry *root_dir = NULL;
+#define MIN(a, b) ((a < b) ? (a) : (b))
 
-static void init() {
-  if (root_dir == NULL) {
-    root_dir = malloc(BS_maxfile_count() * BS_entry_size());
-    HAL_read_bytes(BS_root_offset(), BS_maxfile_count() * BS_entry_size(),
-                   (void *)root_dir);
+static struct entry *__list_directory(int32_t d_offset, int32_t n) {
+  struct entry *ret = NULL;
+  struct entry *cur = NULL;
+
+  char *lfn = NULL;
+
+  for (int i = 0; i < n; i++) {
+    int32_t offset = d_offset + i * 32;
+    uint8_t first_char = HAL_read_u8(offset);
+    if (first_char == 0) {
+      break;
+    } else if (first_char == 0xe5) {
+    } else {
+      if (HAL_read_u8(offset + 11) == 0xf) {
+        // LFN
+        uint8_t is_last = first_char & 0x40;
+        uint8_t lfn_idx = first_char & 0x1F;
+        if (is_last) {
+          lfn = calloc(1, 13 * lfn_idx);
+        }
+
+        char *lfn_ptr = lfn + 13 * (lfn_idx - 1);
+
+        for (int j = 0; j < 5; j++) {
+          uint16_t uchar = HAL_read_uint16_le(offset + 1 + j * 2);
+          if (uchar < 127) {
+            *lfn_ptr = uchar;
+            lfn_ptr += 1;
+          }
+        }
+        for (int j = 0; j < 6; j++) {
+          uint16_t uchar = HAL_read_uint16_le(offset + 14 + j * 2);
+          if (uchar < 127) {
+            *lfn_ptr = uchar;
+            lfn_ptr += 1;
+          }
+        }
+        for (int j = 0; j < 2; j++) {
+          uint16_t uchar = HAL_read_uint16_le(offset + 28 + j * 2);
+          if (uchar < 127) {
+            *lfn_ptr = uchar;
+            lfn_ptr += 1;
+          }
+        }
+        printf("%c", '\n');
+
+      } else {
+        struct entry *en = malloc(sizeof(struct entry));
+        en->next = NULL;
+        en->is_directory = HAL_read_u8(offset + 11) & 0x10;
+        en->is_file = HAL_read_u8(offset + 11) & 0x20;
+        en->filesize = HAL_read_uint32_le(offset + 28);
+        en->cluster = HAL_read_uint16_le(offset + 20) << 16 |
+                      HAL_read_uint16_le(offset + 26);
+        if (lfn) {
+          strcpy(en->filename, lfn);
+          free(lfn);
+        } else {
+          HAL_read_bytes(offset, 11, en->filename);
+        }
+
+        if (ret == NULL) {
+          ret = en;
+          cur = ret;
+        } else {
+          cur->next = en;
+          cur = cur->next;
+        }
+      }
+    }
   }
+  return ret;
 }
 
-union entry *FAT_root_dir() {
-  init();
-  return root_dir;
+struct entry *FAT_list_root() {
+  return (__list_directory(BS_root_offset(), BS_maxfile_count()));
 }
 
-union entry *FAT_dir_at(int32_t cluster) {
-  uint8_t *buf = FAT_get_content(cluster);
-  return (union entry *)buf;
+struct entry *FAT_list_dir(int32_t cluster) {
+  if (cluster == 0) {
+    return FAT_list_root();
+  }
+  struct entry *ret = NULL;
+  struct entry *last = NULL;
+
+  struct cluster *clus = FAT_cluster_chain(cluster);
+  while (clus != NULL) {
+    int32_t offset = BS_data_offset() + (cluster - 2) * BS_cluster_size();
+    struct entry *list = __list_directory(offset, BS_cluster_size() / 32);
+    if (list == NULL) {
+      break;
+    }
+    if (ret == NULL) {
+      ret = list;
+      last = ret;
+    } else {
+      last = list;
+    }
+    while (last->next != NULL) {
+      last = last->next;
+    }
+    clus = clus->next;
+  }
+  return ret;
 }
 
-uint16_t FAT_get_next_cluster(int32_t cluster) {
-  init();
-  cluster -= 2;
-  assert(cluster >= 0);
+int32_t FAT_next_cluster(int32_t cluster) {
+  if (BS_is_fat12()) {
+    int32_t offset = BS_table_offset() + cluster / 2 * 3;
+    uint32_t pack = HAL_read_uint24_le(offset);
 
-  int32_t offset = cluster / 2 * 3;
-  uint8_t pack[3];
-
-  HAL_read_bytes(BS_table_offset() + offset, 3, pack);
-
-  uint16_t ret;
-  if (cluster % 2 == 0) {
-    ret = ((pack[1] & 0x0f) << 8) | pack[0];
+    if (cluster % 2 == 0) {
+      return (pack & 0x00000fff);
+    } else {
+      return ((pack & 0x00fff000) >> 12);
+    }
+  } else if (BS_is_fat16()) {
+    int32_t offset = BS_table_offset() + cluster * 2;
+    return HAL_read_uint16_le(offset);
+  } else if (BS_is_fat32()) {
+    int32_t offset = BS_table_offset() + cluster * 4;
+    return HAL_read_uint32_le(offset);
   } else {
-    ret = (pack[2] << 4) | (pack[1] & 0xf0);
+    printf("File system not detected!");
+    assert(0 == 1);
+  }
+}
+struct cluster *FAT_cluster_chain(int32_t begin) {
+  struct cluster *ret = NULL;
+  struct cluster *cur = NULL;
+  int32_t clus = begin;
+  while (0x2 <= clus && clus < 0xFF0) {
+    struct cluster *next = malloc(sizeof(struct cluster));
+    next->cluster = clus;
+    next->next = NULL;
+    if (ret == NULL) {
+      ret = next;
+      cur = next;
+    } else {
+      cur->next = next;
+      cur = cur->next;
+    }
+    clus = FAT_next_cluster(clus);
   }
   return ret;
 }
 
-uint8_t *FAT_get_content(int32_t start_cluster) {
-  init();
-  uint8_t *ret = malloc(sizeof(int8_t) * BS_cluster_size());
-  uint8_t *ret_ptr = ret;
-  int32_t next_cluster = start_cluster;
-  int i = 0;
-  do {
-    i += 1;
-    ret = realloc(ret, i * sizeof(int8_t) * BS_cluster_size());
-
-    HAL_read_bytes(BS_data_offset() + next_cluster * BS_cluster_size() - 2,
-                   BS_cluster_size(), ret_ptr);
-
-    ret_ptr += BS_cluster_size();
-    next_cluster = FAT_get_next_cluster(next_cluster);
-//    printf("cluster %d\n", next_cluster);
-  } while (next_cluster != 0xfff && next_cluster != 0);
-  return ret;
+int32_t FAT_read_cluster(int32_t idx, int32_t buf_size, void *buf) {
+  int offset = BS_data_offset() + (idx - 2) * BS_cluster_size();
+  return HAL_read_bytes(offset, MIN(BS_cluster_size(), buf_size), buf);
 }
 
-union entry *FAT_get_entry(union entry *directory, int32_t entry_index) {
-  init();
-  union entry *cur = directory + entry_index;
-  if (cur->nentry.filename[0] == 0) {
-    return NULL;
+int32_t FAT_read_file(int32_t cluster, int32_t filesize, void *buf) {
+  uint8_t *u8buf = buf;
+  struct cluster *clus = FAT_cluster_chain(cluster);
+  int32_t read = 0;
+  while (clus != NULL) {
+    int len = FAT_read_cluster(clus->cluster, filesize - read, u8buf);
+    read += len;
+    u8buf += len;
+    clus = clus->next;
   }
-  union entry *ret = malloc(sizeof(union entry));
-  memcpy(ret, directory + entry_index, sizeof(union entry));
-  return ret;
+  return read;
 }

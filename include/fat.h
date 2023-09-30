@@ -1,23 +1,29 @@
+#ifndef FAT_H
+#define FAT_H 1
 
 #include <stdint.h>
 
-struct normal_entry {
-  int8_t filename[11];
-  int8_t attributes;
-  int8_t unused[8];
-  uint16_t high_part_cluster;
-  int8_t unused2[4];
-  uint16_t low_part_cluster;
-  int32_t file_size;
-} __attribute__((packed));
-
-union entry {
-  struct normal_entry nentry;
-  struct normal_entry nentry1;
+struct entry {
+  char filename[256];
+  int8_t is_file;
+  int8_t is_directory;
+  int32_t filesize;
+  int32_t cluster;
+  struct entry *next;
+};
+struct cluster {
+  int32_t cluster;
+  struct cluster *next;
 };
 
-union entry *FAT_root_dir();
+struct entry *FAT_list_root();
+struct entry *FAT_list_dir(int32_t cluster);
 
-uint8_t *FAT_get_content(int32_t start_cluster);
+struct cluster *FAT_cluster_chain(int32_t begin);
 
-union entry *FAT_get_entry(union entry *directory, int32_t entry_index);
+int32_t FAT_next_cluster(int32_t idx);
+
+int32_t FAT_read_cluster(int32_t idx, int32_t buf_size, void *buf);
+int32_t FAT_read_file(int32_t cluster, int32_t filesize, void *buf);
+
+#endif
