@@ -41,7 +41,9 @@ int main(int argc, char *argv[]) {
     } else {
       return -1;
     }
+
     printf("\x1b[2J\x1b[H");
+
     // if valid id
     if (0 < select && select < id) {
       // clear screen

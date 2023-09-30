@@ -48,13 +48,13 @@ int32_t HAL_open_file(const char *path) {
   return 0;
 }
 
-int32_t HAL_close_file() {
-  fclose(image);
+int32_t HAL_close_file(void) {
+  int ret = fclose(image);
   image = NULL;
-  return 0;
+  return ret;
 }
 
-int32_t HAL_read_bytes(int offset, uint32_t num, void *buf) {
+int32_t HAL_read_bytes(uint32_t offset, uint32_t num, void *buf) {
   if (fseeko(image, offset, SEEK_SET)) {
     printf("seek failed! retry");
     if (fseeko(image, offset, SEEK_SET)) {
