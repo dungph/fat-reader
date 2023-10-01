@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     printf("List files and directories\n");
     printf("%s\n", separator);
     printf("%3s|%20s|%8s|%8s|%8s\n", "ID", "NAME", "SIZE", "TYPE", "CLUSTER");
-    
+
     struct entry *entry = directory;
     int id = 1;
     while (entry != 0) {
@@ -70,7 +70,27 @@ int main(int argc, char *argv[]) {
         char buf[entry->filesize + 1];
         buf[entry->filesize] = 0;
         FAT_read_file(entry->cluster, entry->filesize, (uint8_t *)buf);
-        printf("%s\n", buf);
+        int32_t is_binary = 0;
+        for (int i = 0; i < entry->filesize; i++) {
+          if (buf[i] == 0) {
+            is_binary = 1;
+          }
+        }
+        int prev = 0;
+        if (is_binary) {
+          for (int i = 0; i < entry->filesize; i++) {
+            printf("%02X ", buf[i] & 0xff);
+            if (i % 16 == 0 || i + 1 == entry->filesize) {
+              for (int j = prev; j < i; j++) {
+                printf("%c", (31 < buf[j] && buf[j] < 127) ? buf[j] : '.');
+              }
+              prev = i;
+              printf("\n");
+            }
+          }
+        } else {
+          printf("%s\n", buf);
+        }
         printf("%s\n", separator);
       }
     }
