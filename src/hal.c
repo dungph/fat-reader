@@ -7,6 +7,7 @@
 #include <string.h>
 
 static FILE *image = NULL;
+static uint32_t sector_size = 0;
 
 uint8_t HAL_read_u8(int offset) {
   uint8_t ret;
@@ -65,10 +66,15 @@ int32_t HAL_read_bytes(uint32_t offset, uint32_t num, void *buf) {
   return fread(buf, 1, num, image);
 }
 
-int32_t HAL_read_sector(uint32_t idx, uint8_t *buf) {
+int32_t HAL_read_fat_sector(uint32_t idx, uint8_t *buf) {
   return HAL_read_bytes(idx * HAL_sector_size(), HAL_sector_size(), buf);
 }
 
-int32_t HAL_read_multi_sector(uint32_t idx, uint32_t num, uint8_t *buf) {
+int32_t HAL_read_multi_fat_sector(uint32_t idx, uint32_t num, uint8_t *buf) {
   return HAL_read_bytes(idx * HAL_sector_size(), HAL_sector_size() * num, buf);
+}
+
+void HAL_set_sector_size(uint32_t size) {
+  sector_size = size;
+  return;
 }

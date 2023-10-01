@@ -1,31 +1,33 @@
-#include "../include/bs.h"
 #include "../include/fat.h"
-#include "../include/hal.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-
 const char *separator = "----------------------------------------------";
 
 int main(int argc, char *argv[]) {
   // file open in argv[1]
-  printf("opening %s", argv[1]);
-  HAL_open_file(argv[1]);
+  printf("opening %s\n", argv[1]);
+  if (FAT_open_file(argv[1])) {
+    printf("open failed!");
+    return 1;
+  }
+  printf("Image type: %s\n", FAT_type());
 
-  // all directories and files entry in root
+  // init with all directories and files entry in root
   struct entry *directory = FAT_list_root();
 
+  printf("%s\n", separator);
   int select;
   do {
     // print all files and directories in current directory
     printf("%s\n", separator);
     printf("List files and directories\n");
-    struct entry *entry = directory;
     printf("%s\n", separator);
     printf("%3s|%20s|%8s|%8s|%8s\n", "ID", "NAME", "SIZE", "TYPE", "CLUSTER");
+    
+    struct entry *entry = directory;
     int id = 1;
     while (entry != 0) {
       printf("%3d|%20.20s|%8d|%8s|%8x\n", id, entry->filename, entry->filesize,
@@ -65,11 +67,10 @@ int main(int argc, char *argv[]) {
       } else if (entry->is_file) {
         // if is file, read and print the content
         printf("%s\n", separator);
-
         char buf[entry->filesize + 1];
         buf[entry->filesize] = 0;
         FAT_read_file(entry->cluster, entry->filesize, (uint8_t *)buf);
-        printf("%s", buf);
+        printf("%s\n", buf);
         printf("%s\n", separator);
       }
     }

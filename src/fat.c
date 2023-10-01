@@ -59,13 +59,17 @@ static struct entry *__list_directory(int32_t d_offset, int32_t n) {
         struct entry *en = malloc(sizeof(struct entry));
         en->next = NULL;
         en->is_directory = HAL_read_u8(offset + 11) & 0x10;
-        en->is_file = HAL_read_u8(offset + 11) & 0x20;
+        en->is_file = !en->is_directory;
+        // en->is_file = HAL_read_u8(offset + 11) & 0x20;
         en->filesize = HAL_read_uint32_le(offset + 28);
         en->cluster = HAL_read_uint16_le(offset + 20) << 16 |
                       HAL_read_uint16_le(offset + 26);
         if (lfn) {
           strcpy(en->filename, lfn);
-          free(lfn);
+
+          // TODO: if free, read floppy.img will fail
+          lfn = NULL;
+          // free(lfn);
         } else {
           HAL_read_bytes(offset, 11, en->filename);
         }
@@ -84,7 +88,11 @@ static struct entry *__list_directory(int32_t d_offset, int32_t n) {
 }
 
 struct entry *FAT_list_root() {
-  return (__list_directory(BS_root_offset(), BS_maxfile_count()));
+  if (BS_is_fat32()) {
+    return FAT_list_dir(BS_root_cluster());
+  } else {
+    return (__list_directory(BS_root_offset(), BS_root_entry_count()));
+  }
 }
 
 struct entry *FAT_list_dir(int32_t cluster) {
@@ -173,3 +181,25 @@ int32_t FAT_read_file(int32_t cluster, int32_t filesize, void *buf) {
   }
   return read;
 }
+
+int32_t FAT_open_file(const char *filepath) {
+  ;
+  return HAL_open_file(filepath);
+}
+int32_t FAT_close_file(void) {
+  ;
+  return HAL_close_file();
+}
+const char *FAT_type(void) {
+  if (BS_is_fat12()) {
+    return "FAT12";
+  }
+  if (BS_is_fat16()) {
+    return "FAT16";
+  }
+  if (BS_is_fat32()) {
+    return "FAT32";
+  }
+  return "Unknown";
+}
+
