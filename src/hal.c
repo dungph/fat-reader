@@ -1,6 +1,5 @@
 #include "../include/hal.h"
 
-#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,11 +34,6 @@ uint32_t HAL_read_uint32_le(int offset) {
           ((uint32_t)buf[2]) << 16 | ((uint32_t)buf[3]) << 24);
 }
 
-int32_t HAL_sector_size() {
-  ;
-  return HAL_read_uint16_le(11);
-}
-
 int32_t HAL_open_file(const char *path) {
   image = fopen(path, "r");
   if (!image) {
@@ -56,22 +50,30 @@ int32_t HAL_close_file(void) {
 }
 
 int32_t HAL_read_bytes(uint32_t offset, uint32_t num, void *buf) {
-  if (fseeko(image, offset, SEEK_SET)) {
-    printf("seek failed! retry");
-    if (fseeko(image, offset, SEEK_SET)) {
-      printf("seek failed! abort");
+  if (fseek(image, offset, SEEK_SET)) {
+    printf("seek failed! retry\n");
+    if (fseek(image, offset, SEEK_SET)) {
+      printf("seek failed! abort\n");
       return 1;
     }
   }
   return fread(buf, 1, num, image);
 }
 
-int32_t HAL_read_fat_sector(uint32_t idx, uint8_t *buf) {
-  return HAL_read_bytes(idx * HAL_sector_size(), HAL_sector_size(), buf);
+int32_t HAL_read_sector(uint32_t idx, uint8_t *buf) {
+  if (sector_size == 0) {
+    printf("invalid sector size");
+    exit(-1);
+  }
+  return HAL_read_bytes(idx * sector_size, sector_size, buf);
 }
 
-int32_t HAL_read_multi_fat_sector(uint32_t idx, uint32_t num, uint8_t *buf) {
-  return HAL_read_bytes(idx * HAL_sector_size(), HAL_sector_size() * num, buf);
+int32_t HAL_read_multi_sector(uint32_t idx, uint32_t num, uint8_t *buf) {
+  if (sector_size == 0) {
+    printf("invalid sector size");
+    exit(-1);
+  }
+  return HAL_read_bytes(idx * sector_size, sector_size * num, buf);
 }
 
 void HAL_set_sector_size(uint32_t size) {

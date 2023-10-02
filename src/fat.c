@@ -1,7 +1,7 @@
 #include "../include/fat.h"
 #include "../include/bs.h"
 #include "../include/hal.h"
-#include <assert.h>
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,6 +72,12 @@ static struct entry *__list_directory(int32_t d_offset, int32_t n) {
           // free(lfn);
         } else {
           HAL_read_bytes(offset, 11, en->filename);
+          en->filename[11] = 0;
+          for (int i = 11; i >= 0; i--) {
+            if (en->filename[i] == 0 || en->filename[i] == ' ') {
+              en->filename[i] = 0;
+            }
+          }
         }
 
         if (ret == NULL) {
@@ -141,7 +147,7 @@ int32_t FAT_next_cluster(int32_t cluster) {
     return HAL_read_uint32_le(offset);
   } else {
     printf("File system not detected!");
-    assert(0 == 1);
+    exit(-1);
   }
 }
 struct cluster *FAT_cluster_chain(int32_t begin) {
@@ -202,4 +208,3 @@ const char *FAT_type(void) {
   }
   return "Unknown";
 }
-

@@ -1,6 +1,6 @@
 #include "../include/bs.h"
 #include "../include/hal.h"
-#include <assert.h>
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

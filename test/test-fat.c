@@ -5,8 +5,7 @@
 #include <stdio.h>
 
 int main() {
-  assert(1 == 0);
-  // HAL_open_file("./sample/floppy.img");
+  FAT_open_file("./sample/floppy.img");
 
   // union entry *root = FAT_root_dir();
 

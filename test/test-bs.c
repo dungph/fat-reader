@@ -4,18 +4,18 @@
 #include <string.h>
 
 int main() {
-  char *filename = "./sample/floppy2.img";
+  char *filename = "./sample/floppy.img";
   HAL_open_file(filename);
 
   assert(512 == BS_sector_size());
   assert(512 == BS_cluster_size());
   assert(512 == BS_reserved_size());
   assert(2 == BS_table_count());
-  assert(224 == BS_maxfile_count());
+  assert(224 == BS_root_entry_count());
   assert(2880 == BS_sector_count());
   assert(9 * 512 == BS_table_size());
 
-  for (int i = 0; i < BS_maxfile_count(); i++) {
+  for (int i = 0; i < BS_root_entry_count(); i++) {
     uint8_t entry[BS_entry_size()];
     HAL_read_bytes(BS_root_offset() + i * BS_entry_size(), BS_entry_size(),
                    entry);
