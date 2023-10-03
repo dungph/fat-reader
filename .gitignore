@@ -1,2 +1,5 @@
 src/*.o
 test/*.o
+main
+main.exe
+
