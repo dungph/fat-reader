@@ -1,8 +1,10 @@
 # Simple FAT reader: listing directories and files, read text files and hex dump binary files
 
+[https://github.com/dungph/fat-reader](https://github.com/dungph/fat-reader)
+
 ## Usage
 
-`./main.exe <path to image>` or `./main.exe <path to image>` on Windows.
+`make run`, `./main.exe <path to image>` or `./main.exe <path to image>` on Windows.
 
 ## Build in Linux/WSL
 
@@ -12,7 +14,7 @@ Runs `make main` to create main binary file or `gcc -o main src/main.c src/hal.c
 
 ## Build in Windows using MinGW
 
-- Download MinGW at [Link](https://sourceforge.net/projects/mingw/files/Installer/mingw-get-setup.exe/download)
+- Download MinGW installer at [Link](https://sourceforge.net/projects/mingw/files/Installer/mingw-get-setup.exe/download)
 - Install MinGW:
   - Select mingw32-base package like following image, then select `Installation`->`Apply`
     ![Alt text](mingw-pkgs.png)
