@@ -7,12 +7,30 @@
 
 const char *separator = "----------------------------------------------";
 
+void print_help(char *exec) {
+  printf("Usage:\n");
+  printf("\t%s <path to image>\n", exec);
+  printf("Example:\n");
+  printf("\t%s sample/fat12.img\n", exec);
+  printf("Note:\n");
+  printf("\tuse number to travel across directories or to select file to read.\n");
+  printf("\tthe `.` directory is current directory.\n");
+  printf("\tthe `..` directory is parent directory.\n");
+  printf("\tthe binary files will be printed in hex.\n");
+  printf("\tthe text files will be printed as is.\n");
+}
+
 int main(int argc, char *argv[]) {
-  // file open in argv[1]
-  printf("opening %s\n", argv[1]);
-  if (FAT_open_file(argv[1])) {
-    printf("open failed!");
-    return 1;
+  if (argc > 1) {
+    // file open in argv[1]
+    printf("opening %s\n", argv[1]);
+    if (FAT_open_file(argv[1])) {
+      printf("open failed!");
+      return 1;
+    }
+  } else {
+    print_help(argv[0]);
+    return 0;
   }
   printf("Image type: %s\n", FAT_type());
 
