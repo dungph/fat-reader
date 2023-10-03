@@ -16,11 +16,13 @@
 #define BS_FIELD(func_name, init)                                              \
   int32_t BS_##func_name() {                                                   \
     static uint32_t val = 0;                                                   \
-    if (val == 0) {                                                            \
+    if (val == 0 || !cache) {                                                  \
       val = init;                                                              \
     }                                                                          \
     return val;                                                                \
   }
+
+static int32_t cache = 1;
 
 // offset ref: https://wiki.osdev.org/FAT
 BS_FIELD(sector_size, HAL_read_uint16_le(11))
@@ -50,3 +52,8 @@ static int32_t cluster_count() {
 BS_FIELD(is_fat12, (cluster_count() < 4085) ? 1 : 0)
 BS_FIELD(is_fat16, (4085 <= cluster_count() && cluster_count() < 65525) ? 1 : 0)
 BS_FIELD(is_fat32, (65525 < cluster_count()) ? 1 : 0)
+
+void BS_set_cache(int32_t value) {
+  cache = value;
+  return;
+}

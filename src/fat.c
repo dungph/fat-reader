@@ -21,72 +21,73 @@ static struct entry *__list_directory(int32_t d_offset, int32_t n) {
     if (first_char == 0) {
       break;
     } else if (first_char == 0xe5) {
+    } else if (HAL_read_u8(offset + 11) == 0xf) {
+      // LFN
+      uint8_t is_last = first_char & 0x40;
+      uint8_t lfn_idx = first_char & 0x1F;
+      if (is_last) {
+        lfn = calloc(1, 13 * lfn_idx + 1);
+      }
+
+      char *lfn_ptr = lfn + 13 * (lfn_idx - 1);
+
+      for (int j = 0; j < 5; j++) {
+        uint16_t uchar = HAL_read_uint16_le(offset + 1 + j * 2);
+        if (uchar < 127) {
+          *lfn_ptr = uchar;
+          lfn_ptr += 1;
+        }
+      }
+      for (int j = 0; j < 6; j++) {
+        uint16_t uchar = HAL_read_uint16_le(offset + 14 + j * 2);
+        if (uchar < 127) {
+          *lfn_ptr = uchar;
+          lfn_ptr += 1;
+        }
+      }
+      for (int j = 0; j < 2; j++) {
+        uint16_t uchar = HAL_read_uint16_le(offset + 28 + j * 2);
+        if (uchar < 127) {
+          *lfn_ptr = uchar;
+          lfn_ptr += 1;
+        }
+      }
+
     } else {
-      if (HAL_read_u8(offset + 11) == 0xf) {
-        // LFN
-        uint8_t is_last = first_char & 0x40;
-        uint8_t lfn_idx = first_char & 0x1F;
-        if (is_last) {
-          lfn = calloc(1, 13 * lfn_idx);
-        }
+      struct entry *en = malloc(sizeof(struct entry));
+      en->next = NULL;
+      en->is_directory = HAL_read_u8(offset + 11) & 0x10;
+      en->is_file = !en->is_directory;
+      // en->is_file = HAL_read_u8(offset + 11);
+      //  en->is_file = HAL_read_u8(offset + 11) & 0x20;
+      en->filesize = HAL_read_uint32_le(offset + 28);
+      en->cluster = HAL_read_uint16_le(offset + 20) << 16 |
+                    HAL_read_uint16_le(offset + 26);
+      if (lfn) {
+        strcpy(en->filename, lfn);
 
-        char *lfn_ptr = lfn + 13 * (lfn_idx - 1);
-
-        for (int j = 0; j < 5; j++) {
-          uint16_t uchar = HAL_read_uint16_le(offset + 1 + j * 2);
-          if (uchar < 127) {
-            *lfn_ptr = uchar;
-            lfn_ptr += 1;
-          }
-        }
-        for (int j = 0; j < 6; j++) {
-          uint16_t uchar = HAL_read_uint16_le(offset + 14 + j * 2);
-          if (uchar < 127) {
-            *lfn_ptr = uchar;
-            lfn_ptr += 1;
-          }
-        }
-        for (int j = 0; j < 2; j++) {
-          uint16_t uchar = HAL_read_uint16_le(offset + 28 + j * 2);
-          if (uchar < 127) {
-            *lfn_ptr = uchar;
-            lfn_ptr += 1;
-          }
-        }
-        printf("%c", '\n');
-
+        // TODO: if free, read floppy.img will fail
+        lfn = NULL;
+        // free(lfn);
       } else {
-        struct entry *en = malloc(sizeof(struct entry));
-        en->next = NULL;
-        en->is_directory = HAL_read_u8(offset + 11) & 0x10;
-        en->is_file = !en->is_directory;
-        // en->is_file = HAL_read_u8(offset + 11) & 0x20;
-        en->filesize = HAL_read_uint32_le(offset + 28);
-        en->cluster = HAL_read_uint16_le(offset + 20) << 16 |
-                      HAL_read_uint16_le(offset + 26);
-        if (lfn) {
-          strcpy(en->filename, lfn);
+        HAL_read_bytes(offset, 11, en->filename);
+        en->filename[11] = 0;
 
-          // TODO: if free, read floppy.img will fail
-          lfn = NULL;
-          // free(lfn);
-        } else {
-          HAL_read_bytes(offset, 11, en->filename);
-          en->filename[11] = 0;
-          for (int i = 11; i >= 0; i--) {
-            if (en->filename[i] == 0 || en->filename[i] == ' ') {
-              en->filename[i] = 0;
-            }
+        // clean trailing spaces
+        for (int i = 11; i >= 0; i--) {
+          if (en->filename[i] == 0 || en->filename[i] == ' ') {
+            en->filename[i] = 0;
           }
         }
+      }
 
-        if (ret == NULL) {
-          ret = en;
-          cur = ret;
-        } else {
-          cur->next = en;
-          cur = cur->next;
-        }
+      // add to list
+      if (ret == NULL) {
+        ret = en;
+        cur = ret;
+      } else {
+        cur->next = en;
+        cur = cur->next;
       }
     }
   }

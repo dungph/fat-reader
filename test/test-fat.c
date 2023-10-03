@@ -1,7 +1,4 @@
-#include "../include/bs.h"
 #include "../include/fat.h"
-#include "../include/hal.h"
-#include <assert.h>
 #include <stdio.h>
 
 int main() {

@@ -30,6 +30,9 @@ int main(int argc, char *argv[]) {
     struct entry *entry = directory;
     int id = 1;
     while (entry != 0) {
+      // printf("%3d|%20.20s|%8d|%8x|%8x\n", id, entry->filename,
+      // entry->filesize,
+      //        (entry->is_file), entry->cluster);
       printf("%3d|%20.20s|%8d|%8s|%8x\n", id, entry->filename, entry->filesize,
              (entry->is_file) ? "file" : "dir", entry->cluster);
       entry = entry->next;
@@ -44,11 +47,11 @@ int main(int argc, char *argv[]) {
       return -1;
     }
 
+    // clear screen
     printf("\x1b[2J\x1b[H");
 
     // if valid id
     if (0 < select && select < id) {
-      // clear screen
 
       entry = directory;
       for (int i = 1; i < select; i++) {
@@ -65,11 +68,13 @@ int main(int argc, char *argv[]) {
         }
         directory = FAT_list_dir(entry->cluster);
       } else if (entry->is_file) {
-        // if is file, read and print the content
+        // if is file, read the content
         printf("%s\n", separator);
-        char buf[entry->filesize + 1];
+        char *buf = malloc(entry->filesize + 1);
         buf[entry->filesize] = 0;
         FAT_read_file(entry->cluster, entry->filesize, (uint8_t *)buf);
+        // check if file is binary. binary usually
+        // has invalid text char such as \0
         int32_t is_binary = 0;
         for (int i = 0; i < entry->filesize; i++) {
           if (buf[i] == 0) {

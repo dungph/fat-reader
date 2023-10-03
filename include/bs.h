@@ -111,4 +111,12 @@ int32_t BS_is_fat32();
 //!
 int32_t BS_root_cluster();
 
+//! Set cache on or off (for debugging and testing)
+//! Default: 1(on)
+//!
+//! param:
+//!      int32_t cache: boolean val for the setting
+//!
+void BS_set_cache(int32_t cache);
+
 #endif

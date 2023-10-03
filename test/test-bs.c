@@ -3,46 +3,35 @@
 #include <assert.h>
 #include <string.h>
 
-int main() {
-  char *filename = "./sample/floppy.img";
-  HAL_open_file(filename);
-
-  assert(512 == BS_sector_size());
-  assert(512 == BS_cluster_size());
-  assert(512 == BS_reserved_size());
-  assert(2 == BS_table_count());
-  assert(224 == BS_root_entry_count());
-  assert(2880 == BS_sector_count());
-  assert(9 * 512 == BS_table_size());
-
-  for (int i = 0; i < BS_root_entry_count(); i++) {
-    uint8_t entry[BS_entry_size()];
-    HAL_read_bytes(BS_root_offset() + i * BS_entry_size(), BS_entry_size(),
-                   entry);
-
-    if (entry[0] != 0) {
-      // printf("%d\n", root_offset + i * HAL_entry_size());
-      uint8_t file_name[9];
-      memcpy(file_name, entry, 8);
-      file_name[8] = 0;
-      for (int i = 8; i >= 0; i--) {
-        if (file_name[i] == 0x20 || file_name[i] == 0x00) {
-          file_name[i] = 0x00;
-        }
-      }
-      uint8_t file_ext[4];
-      memcpy(file_ext, entry + 8, 3);
-      file_ext[3] = 0;
-      for (int i = 3; i >= 0; i--) {
-        if (file_ext[i] == 0x20 || file_ext[i] == 0x00) {
-          file_ext[i] = 0x00;
-        }
-      }
-      if (file_ext[0] == 0x00) {
-        printf("%s\n", file_name);
-      } else {
-        printf("%s.%s\n", file_name, file_ext);
-      }
-    }
+#define ASSERT(detail, expr)                                                   \
+  printf("%s\n", detail);                                                      \
+  if (expr) {                                                                  \
+    printf("\x1b[0;32mSuccess\x1b[0m %s \n", #expr);                           \
+  } else {                                                                     \
+    printf("\x1b[0;31mFailed\x1b[0m %s \n", #expr);                            \
   }
+
+int main() {
+  BS_set_cache(0);
+
+  HAL_open_file("./sample/floppy.img");
+  ASSERT("check floppy.img sector size", 512 == BS_sector_size());
+  ASSERT("check floppy.img cluster size", 512 == BS_cluster_size());
+  ASSERT("check floppy.img reserved size", 512 == BS_reserved_size());
+  ASSERT("check floppy.img number of table", 2 == BS_table_count());
+  ASSERT("check floppy.img max root entry", 224 == BS_root_entry_count());
+  ASSERT("check floppy.img number of sector", 2880 == BS_sector_count());
+  ASSERT("check floppy.img size of table", 9 * 512 == BS_table_size());
+  HAL_close_file();
+
+  HAL_open_file("./sample/floppy2.img");
+  ASSERT("check floppy2.img sector size", 512 == BS_sector_size());
+  ASSERT("check floppy2.img cluster size", 1024 == BS_cluster_size());
+  ASSERT("check floppy2.img reserved size", 512 == BS_reserved_size());
+  ASSERT("check floppy2.img number of table", 2 == BS_table_count());
+  ASSERT("check floppy2.img max root entry", 224 == BS_root_entry_count());
+  ASSERT("check floppy2.img number of sector", 2880 == BS_sector_count());
+  printf("%d", BS_table_size());
+  ASSERT("check floppy2.img size of table", 5 * 512 == BS_table_size());
+  HAL_close_file();
 }

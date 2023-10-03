@@ -67,7 +67,7 @@ struct entry *FAT_list_dir(int32_t cluster);
 //! param:
 //!    int32_ti begin: begining cluster of the cluster chain
 //! return:
-//!     struct entry* if success
+//!     struct cluster* if success
 //!     NULL if failed or none
 //!
 struct cluster *FAT_cluster_chain(int32_t cluster);
@@ -88,7 +88,7 @@ int32_t FAT_next_cluster(int32_t cluster);
 //!    int32_t buf_size: actual size of the buf
 //!    void *buf: pointer to the buffer
 //! return:
-//!    int32_t: number of read file
+//!    int32_t: number of read bytes
 //!
 int32_t FAT_read_cluster(int32_t cluster, int32_t buf_size, void *buf);
 
@@ -99,7 +99,7 @@ int32_t FAT_read_cluster(int32_t cluster, int32_t buf_size, void *buf);
 //!    int32_t buf_size: actual size of the buffer
 //!    void *buf: pointer to the buffer
 //! return:
-//!    int32_t: number of read file
+//!    int32_t: number of read bytes
 //!
 int32_t FAT_read_file(int32_t cluster, int32_t filesize, void *buf);
 
