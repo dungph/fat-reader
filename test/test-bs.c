@@ -1,15 +1,8 @@
 #include "../include/bs.h"
 #include "../include/hal.h"
-#include <assert.h>
-#include <string.h>
+#include "c-assert.h"
 
-#define ASSERT(detail, expr)                                                   \
-  printf("%s\n", detail);                                                      \
-  if (expr) {                                                                  \
-    printf("\x1b[0;32mSuccess\x1b[0m %s \n", #expr);                           \
-  } else {                                                                     \
-    printf("\x1b[0;31mFailed\x1b[0m %s \n", #expr);                            \
-  }
+#include <string.h>
 
 int main() {
   BS_set_cache(0);
